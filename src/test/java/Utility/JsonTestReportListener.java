@@ -109,14 +109,16 @@ public class JsonTestReportListener implements ITestListener {
             String projectId = props.getProperty("project.id");
             String userId = props.getProperty("user.id");
             String runid= props.getProperty("project.name")+"_"+folderTimestamp;
+            String url_superbase=props.getProperty("Automation.url");
+            String key=props.getProperty("superbase.key");
 
             if (projectId == null || userId == null) {
                 throw new RuntimeException("project.id or user.id not found in project.properties!");
             }
 
             // --- Supabase URL and anon key ---
-            String supabaseUrl = "https://lghzmijzfpvrcvogxpew.supabase.co/rest/v1/automation_results";
-            String anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnaHptaWp6ZnB2cmN2b2d4cGV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwODYzNDQsImV4cCI6MjA3MDY2MjM0NH0.ySHdnHqIsq3ot0Cg7gyQvES6qZrN1TZSyZg4XoKaneE";
+            String supabaseUrl = url_superbase;
+            String anonKey = key;
 
             // --- Convert report map to JSON ---
             Gson gson = new GsonBuilder().create();
