@@ -59,12 +59,12 @@ public class JsonTestReportListener implements ITestListener {
         LogCollector.clear();
     }
 
-
     @Override
     public void onFinish(ITestContext context) {
+
         suiteEndTime = System.currentTimeMillis();
 
-        // --- Summary block ---
+        // -------- SUMMARY --------
         Map<String, Object> summary = new HashMap<>();
         summary.put("failed", tests.stream().filter(t -> "FAILED".equals(t.status)).count());
         summary.put("passed", tests.stream().filter(t -> "PASSED".equals(t.status)).count());
@@ -72,24 +72,24 @@ public class JsonTestReportListener implements ITestListener {
         summary.put("totalTests", tests.size());
         summary.put("totalExecutionTimeMs", suiteEndTime - suiteStartTime);
 
-        // --- Main report structure ---
+        // -------- REPORT --------
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("tests", tests);
         report.put("browser", System.getProperty("browser", "Chrome 128.0"));
+        report.put("project", "Automation Project");
         report.put("summary", summary);
         report.put("platform", System.getProperty("os.name", "Windows 11"));
         report.put("environment", "QA");
 
-        // --- Format timestamps in PostgreSQL format (UTC) ---
         SimpleDateFormat pgTimestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssXXX");
         pgTimestamp.setTimeZone(TimeZone.getTimeZone("UTC"));
         String executionTimestamp = pgTimestamp.format(new Date());
         report.put("executionDate", executionTimestamp);
 
-        // --- Write JSON locally (optional) ---
         String folderTimestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
         String folderPath = "Test_Reports/" + folderTimestamp;
         new File(folderPath).mkdirs();
+
         try (FileWriter writer = new FileWriter(folderPath + "/test-results.json")) {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             gson.toJson(report, writer);
@@ -97,34 +97,26 @@ public class JsonTestReportListener implements ITestListener {
             e.printStackTrace();
         }
 
-        // --- Push JSON to Supabase ---
+        // -------- SUPABASE / PAYLOAD --------
         try {
-            // --- Load project properties ---
             String propertiesFilePath = System.getProperty("user.dir") + "/project.properties";
             Properties props = new Properties();
+
             try (FileInputStream fis = new FileInputStream(propertiesFilePath)) {
                 props.load(fis);
             }
 
             String projectId = props.getProperty("project.id");
             String userId = props.getProperty("user.id");
-            String runid= props.getProperty("project.name")+"_"+folderTimestamp;
-            String url_superbase=props.getProperty("Automation.url");
-            String key=props.getProperty("superbase.key");
+            String runid = props.getProperty("project.name") + "_" + folderTimestamp;
 
             if (projectId == null || userId == null) {
                 throw new RuntimeException("project.id or user.id not found in project.properties!");
             }
 
-            // --- Supabase URL and anon key ---
-            String supabaseUrl = url_superbase;
-            String anonKey = key;
-
-            // --- Convert report map to JSON ---
             Gson gson = new GsonBuilder().create();
             String reportJson = gson.toJson(report);
 
-            // --- Build JSON payload ---
             String payload = "{"
                     + "\"id\":\"" + UUID.randomUUID() + "\","
                     + "\"run_id\":\"" + runid + "\","
@@ -135,30 +127,21 @@ public class JsonTestReportListener implements ITestListener {
                     + "\"created_at\":\"" + executionTimestamp + "\""
                     + "}";
 
-            // --- Open HTTP connection ---
-            java.net.URL url = new java.net.URL(supabaseUrl);
-            System.out.println("Supabase URL: " + url);
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("apikey", anonKey);
-            conn.setRequestProperty("Authorization", "Bearer " + anonKey);
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            String baseDir = System.getProperty("user.dir");
+            String filePath = baseDir + File.separator + "payload.json";
 
-            // --- Send payload ---
-            try (java.io.OutputStream os = conn.getOutputStream()) {
-                byte[] input = payload.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
+            try (FileWriter writer = new FileWriter(filePath)) {
+                writer.write(payload);
             }
-
-            // --- Read response code ---
-            int responseCode = conn.getResponseCode();
-            System.out.println("Supabase insert response code: " + responseCode);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+
+
+
 
 
 
