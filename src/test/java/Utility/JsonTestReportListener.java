@@ -107,7 +107,7 @@ public class JsonTestReportListener implements ITestListener {
             }
 
             String projectId = props.getProperty("project.id");
-            String userId = props.getProperty("user.id");
+            String userId = props.getProperty("job.created_by");
             String runid = props.getProperty("project.name") + "_" + folderTimestamp;
 
             if (projectId == null || userId == null) {
